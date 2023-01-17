@@ -1,0 +1,71 @@
+--year with highest population by country and the corresponding fertility rate, where fertility rate = lifetime births per woman
+WITH pop as (
+SELECT
+country_name,
+MAX(midyear_population) as pop_high
+FROM `bigquery-public-data.census_bureau_international.midyear_population` 
+GROUP BY
+country_name
+), pop_with_year as (
+SELECT
+pop.country_name,
+pop.pop_high as high,
+year
+FROM `pop` 
+JOIN `bigquery-public-data.census_bureau_international.midyear_population` as main on pop.country_name=main.country_name
+WHERE
+midyear_population = pop.pop_high 
+) 
+
+SELECT
+pop_with_year.country_name,
+pop_with_year.year,
+pop_with_year.high,
+ROUND(total_fertility_rate, 2) as fertility_rate
+FROM
+`pop_with_year`
+JOIN `bigquery-public-data.census_bureau_international.age_specific_fertility_rates` as fertility on pop_with_year.year=fertility.year and pop_with_year.country_name=fertility.country_name
+WHERE
+pop_with_year.year <= 2022
+ORDER BY
+high DESC
+LIMIT 50 ;
+
+--how many countries had their population high in the years 1950-2000, and how many in 2001-2022?
+WITH pop as (
+SELECT
+country_name,
+MAX(midyear_population) as pop_high
+FROM `bigquery-public-data.census_bureau_international.midyear_population` 
+GROUP BY
+country_name
+), pop_with_year as (
+SELECT
+pop.country_name,
+pop.pop_high as high,
+year
+FROM `pop` 
+JOIN `bigquery-public-data.census_bureau_international.midyear_population` as main on pop.country_name=main.country_name
+WHERE
+midyear_population = pop.pop_high 
+)
+
+SELECT
+COUNT(*) as total_countries,
+  (SELECT
+  COUNT(*)
+  FROM pop_with_year
+  WHERE
+  year >= 2001 AND year <= 2022) as high_in_2001_2022,
+  (SELECT
+  COUNT(*)
+  FROM pop_with_year
+  WHERE year >= 1950 AND year <= 2000) as high_in_1950_2000
+FROM pop_with_year
+WHERE year <=2022 ;
+
+
+--show the range of years the data represents (how to confirm all years within MAX + MIN exist?)
+SELECT
+CONCAT(MIN(year)," - ", (MAX(year))) as year_range 
+FROM `bigquery-public-data.census_bureau_international.midyear_population`;
